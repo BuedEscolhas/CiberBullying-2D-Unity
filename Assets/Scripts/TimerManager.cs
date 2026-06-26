@@ -3,78 +3,57 @@ using TMPro;
 
 public class TimerManager : MonoBehaviour
 {
-    [Header("Timer Settings")]
-    public float startTime = 120f;
+    [SerializeField] private float startTime = 60f;   // ← requisito: 60s
+    [SerializeField] private TMP_Text timerText;
+    [SerializeField] private BombObstacle bombObstacle;
 
-    [Header("UI")]
-    public TMP_Text timerText;
+    public float CurrentTime { get; private set; }
+    public bool IsRunning { get; private set; }
 
-    [Header("Bomb")]
-    public BombObstacle bombObstacle;
+    private float _uiTimer;
+    private const float UI_INTERVAL = 0.1f;
 
-    private float currentTime;
-    private bool timerRunning = false;
+    private void Start() => ResetTimer();
 
-    void Start()
+    private void Update()
     {
-        currentTime = startTime;
+        if (!IsRunning) return;
 
-        UpdateTimerUI();
-    }
+        CurrentTime -= Time.deltaTime;
 
-    void Update()
-    {
-        if (!timerRunning)
-            return;
+        _uiTimer += Time.deltaTime;
+        if (_uiTimer >= UI_INTERVAL) { _uiTimer = 0f; UpdateUI(); }
 
-        currentTime -= Time.deltaTime;
-
-        if (currentTime <= 0)
+        if (CurrentTime <= 0f)
         {
-            currentTime = 0;
-            timerRunning = false;
-
-            if (bombObstacle != null)
-            {
-                bombObstacle.Explode();
-            }
+            CurrentTime = 0f;
+            IsRunning = false;
+            UpdateUI();
+            bombObstacle?.Explode();
         }
-
-        UpdateTimerUI();
     }
 
-    public void StartTimer()
+    public void StartTimer() => IsRunning = true;
+    public void StopTimer() => IsRunning = false;
+
+    /// <summary>Repõe para startTime e para o timer. Corrige bug original.</summary>
+    public void ResetTimer()
     {
-        timerRunning = true;
-
-        Debug.Log("Timer iniciado");
+        CurrentTime = startTime;
+        IsRunning = false;
+        UpdateUI();
     }
 
-    public void StopTimer()
-    {
-        timerRunning = false;
-
-        Debug.Log("Timer parado");
-    }
-
+    /// <summary>Penalidade de resposta errada na bomba (-30s).</summary>
     public void RemoveTime(float amount)
     {
-        currentTime -= amount;
-
-        if (currentTime < 0)
-            currentTime = 0;
-
-        UpdateTimerUI();
-
-        Debug.Log("Perdeu " + amount + " segundos");
+        CurrentTime = Mathf.Max(0f, CurrentTime - amount);
+        UpdateUI();
     }
 
-    void UpdateTimerUI()
+    private void UpdateUI()
     {
-        if (timerText == null)
-            return;
-
-        timerText.text =
-            Mathf.CeilToInt(currentTime).ToString();
+        if (timerText != null)
+            timerText.text = Mathf.CeilToInt(CurrentTime).ToString();
     }
 }
